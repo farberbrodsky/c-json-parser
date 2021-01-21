@@ -121,18 +121,18 @@ char * to_string(JSON_value v) {
     return result;
 }
 
-JSON_object parse_object(char *s) {
+JSON_object parse_object(char **s) {
 }
 
-JSON_array parse_array(char *s) {
+JSON_array parse_array(char **s) {
 }
 
-char * parse_string(char *s) {
-    char *result = malloc(strlen(s) + 1);
+char * parse_string(char **s) {
+    char *result = malloc(strlen(*s) + 1);
     char *current_char = result;
-    for (char *p = s; *p != '\0'; p++) {
-        if (*p == '\\') {
-            switch (*(++p)) {
+    for (; **s != '\0'; ++*s) {
+        if (**s == '\\') {
+            switch (*(++*s)) {
                 case '\\':
                     *current_char = '\\';
                     break;
@@ -143,12 +143,12 @@ char * parse_string(char *s) {
                     *current_char = '\n';
                     break;
             }
-        } else if (*p == '"') {
+        } else if (**s == '"') {
             current_char++;
             *current_char = '\0';
             return result;
         } else {
-            *current_char = *p;
+            *current_char = **s;
         }
         current_char++;
     }
@@ -156,32 +156,36 @@ char * parse_string(char *s) {
     return result;
 }
 
-double parse_number(char *s) {
+double parse_number(char **s) {
     double d;
-    sscanf(s, "%lf", &d);
+    sscanf(*s, "%lf", &d);
+    for (; **s == '0' || **s == '1' || **s == '2' || **s == '3' || **s == '4' || **s == '5' || **s == '6' || **s == '7' || **s == '8' || **s == '9' || **s == '.'; ++*s);
     return d;
 }
 
-JSON_value parse_json(char *s) {
+JSON_value parse_json(char **s) {
     JSON_value result;
-    for (char *p = s; *p != '\0'; p++) {
-        switch (*p) {
+    for (; **s != '\0'; ++*s) {
+        switch (**s) {
             case '{': {
                 // object
+                ++*s;
                 result.data_type = JSON_data_type_object;
-                JSON_object obj = parse_object(p + 1);
+                JSON_object obj = parse_object(s);
                 memcpy(result.data, &obj, sizeof(JSON_object));
                 return result;
             }
             case '[': { // array
+                ++*s;
                 result.data_type = JSON_data_type_array;
-                JSON_array arr = parse_array(p + 1);
+                JSON_array arr = parse_array(s);
                 memcpy(result.data, &arr, sizeof(JSON_array));
                 return result;
             }
             case '"': { // string
+                ++*s;
                 result.data_type = JSON_data_type_string;
-                char *str = parse_string(p + 1);
+                char *str = parse_string(s);
                 result.data = str;
                 return result;
             }
@@ -210,7 +214,7 @@ JSON_value parse_json(char *s) {
             case '8':
             case '9': // number
                 result.data_type = JSON_data_type_number;
-                double d = parse_number(p);
+                double d = parse_number(s);
                 result.data = malloc(sizeof(double));
                 memcpy(result.data, &d, sizeof(double));
                 return result;
@@ -246,7 +250,8 @@ int main() {
     my_value.data_type = JSON_data_type_object;
     my_value.data = &my_obj;
 
-    JSON_value parse_example = parse_json("true");
+    char *x = "123.4";
+    JSON_value parse_example = parse_json(&x);
 
     printf("%s\n", to_string(parse_example));
     return 0;
