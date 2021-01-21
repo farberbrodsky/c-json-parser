@@ -45,7 +45,7 @@ char * to_string(JSON_value v) {
             break;
         }
         case JSON_data_type_number: {
-            asprintf(&result, "%f", *((double *)v.data));
+            asprintf(&result, "%g", *((double *)v.data));
             break;
         }
         case JSON_data_type_object: {
@@ -131,6 +131,9 @@ char * parse_string(char *s) {
 }
 
 double parse_number(char *s) {
+    double d;
+    sscanf(s, "%lf", &d);
+    return d;
 }
 
 JSON_value parse_json(char *s) {
@@ -184,7 +187,7 @@ JSON_value parse_json(char *s) {
                 double d = parse_number(p);
                 result.data = malloc(sizeof(double));
                 memcpy(result.data, &d, sizeof(double));
-                break;
+                return result;
         }
     }
     // return a NULL if this isn't valid
