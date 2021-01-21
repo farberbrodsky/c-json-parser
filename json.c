@@ -268,4 +268,34 @@ JSON_value parse_json(char **s) {
 }
 
 // TODO: function to free a json value
-void free_json_value(JSON_value v) {}
+void free_json_value(JSON_value v) {
+    switch (v.data_type) {
+        case JSON_data_type_string: {
+            free(v.data);
+            break;
+        }
+        case JSON_data_type_object: {
+            JSON_object data = *((JSON_object*)v.data);
+            for (ssize_t i = 0; i < data.len; i++) {
+                JSON_key_value kv = data.values[i];
+                free(kv.key);
+                free_json_value(kv.value);
+            }
+            free(data.values);
+            free(v.data);
+            break;
+        }
+        case JSON_data_type_array: {
+            JSON_array data = *((JSON_array*)v.data);
+            for (ssize_t i = 0; i < data.len; i++) {
+                free_json_value(data.values[i]);
+            }
+            free(data.values);
+            free(v.data);
+            break;
+        }
+        case JSON_data_type_number:
+            free(v.data);
+            break;
+    }
+}
