@@ -105,6 +105,9 @@ JSON_array parse_array(char **s) {
         result.len++;
         result.values = realloc(result.values, sizeof(JSON_value) * (result.len + 1));
     }
+    if (**s == ']') {
+        ++*s;
+    }
     return result;
 }
 
@@ -173,14 +176,20 @@ JSON_value parse_json(char **s) {
                 return result;
             }
             case 'f': { // false
-                result.data_type = JSON_data_type_bool;
-                result.data = NULL;
-                return result;
+                if (strncmp(*s, "false", 5) == 0) {
+                    *s += 5;
+                    result.data_type = JSON_data_type_bool;
+                    result.data = NULL;
+                    return result;
+                }
             }
             case 't': { // true
-                result.data_type = JSON_data_type_bool;
-                result.data = NULL + 1;
-                return result;
+                if (strncmp(*s, "true", 4) == 0) {
+                    *s += 4;
+                    result.data_type = JSON_data_type_bool;
+                    result.data = NULL + 1;
+                    return result;
+                }
             }
             case 'n': { // null
                 result.data_type = JSON_data_type_null;
@@ -212,7 +221,7 @@ JSON_value parse_json(char **s) {
 void free_json_value(JSON_value v) {}
 
 int main() {
-    char *x = "[\"hi\", 123, 55,5.4]";
+    char *x = "[[\"hi\", 123, 55,5.4], 123]";
     JSON_value parse_example = parse_json(&x);
     printf("%s\n", JSON_to_string(parse_example));
     free_json_value(parse_example);
