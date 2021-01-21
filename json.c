@@ -1,7 +1,8 @@
 #define _GNU_SOURCE
 #include "json.h"
+#define return_JSON_error() { JSON_value err; err.data_type = JSON_error; return err; }
 
-char * JSON_to_string(JSON_value v) {
+char *JSON_to_string(JSON_value v) {
     char *result;
     switch (v.data_type) {
         case JSON_data_type_string: {
@@ -33,7 +34,7 @@ char * JSON_to_string(JSON_value v) {
                 result = realloc(result, len);
                 sprintf(result + str_index, "\"%s\":", key_val.key);
                 str_index += strlen(key_val.key) + 3;
-                strcpy(result + str_index, val_str);
+                memcpy(result + str_index, val_str, strlen(val_str));
                 str_index += strlen(val_str);
                 if (i != (data.len - 1)) {
                     result[str_index] = ',';
@@ -93,19 +94,60 @@ char * JSON_to_string(JSON_value v) {
     return result;
 }
 
-JSON_object parse_object(char **s) {
+JSON_value parse_object(char **s) {
+    JSON_object *result = (JSON_object*)malloc(sizeof(JSON_object));
+    result->len = 0;
+    result->values = malloc(sizeof(JSON_key_value));
+    JSON_value final_result;
+    final_result.data_type = JSON_data_type_object;
+    final_result.data = result;
+    while (**s != '}') {
+        while (**s == ' ' || **s == ',') {
+            ++*s;
+        }
+        // parse key
+        JSON_value key = parse_json(s);
+        if (key.data_type != JSON_data_type_string) {
+            free_json_value(final_result);
+            return_JSON_error();
+        }
+        char *k = key.data;
+        if (**s != ':') {
+            free_json_value(final_result);
+            return_JSON_error();
+        } else {
+            ++*s;
+        }
+        JSON_value v = parse_json(s);
+        if (v.data_type == JSON_error) {
+            free_json_value(final_result);
+            return v;
+        }
+        result->values[result->len].key = k;
+        result->values[result->len].value = v;
+        result->len++;
+        result->values = realloc(result->values, sizeof(JSON_key_value) * (result->len + 1));
+    }
+    if (**s == '}') {
+        ++*s;
+    }
+    return final_result;
 }
 
 JSON_value parse_array(char **s) {
     JSON_array *result = (JSON_array*)malloc(sizeof(JSON_array));
     result->len = 0;
     result->values = malloc(sizeof(JSON_value));
+    JSON_value final_result;
+    final_result.data_type = JSON_data_type_array;
+    final_result.data = result;
     while (**s != ']') {
         while (**s == ' ' || **s == ',') {
             ++*s;
         }
         JSON_value x = parse_json(s);
         if (x.data_type == JSON_error) {
+            free_json_value(final_result);
             return x;
         }
         result->values[result->len] = x;
@@ -115,13 +157,10 @@ JSON_value parse_array(char **s) {
     if (**s == ']') {
         ++*s;
     }
-    JSON_value final_result;
-    final_result.data_type = JSON_data_type_array;
-    final_result.data = result;
     return final_result;
 }
 
-char * parse_string(char **s) {
+char *parse_string(char **s) {
     char *result = malloc(strlen(*s) + 1);
     char *current_char = result;
     for (; **s != '\0'; ++*s) {
@@ -139,7 +178,6 @@ char * parse_string(char **s) {
             }
         } else if (**s == '"') {
             ++*s;
-            current_char++;
             *current_char = '\0';
             return result;
         } else {
@@ -165,10 +203,7 @@ JSON_value parse_json(char **s) {
             case '{': {
                 // object
                 ++*s;
-                result.data_type = JSON_data_type_object;
-                JSON_object obj = parse_object(s);
-                memcpy(result.data, &obj, sizeof(JSON_object));
-                return result;
+                return parse_object(s);
             }
             case '[': { // array
                 ++*s;
@@ -188,8 +223,7 @@ JSON_value parse_json(char **s) {
                     result.data = NULL;
                     return result;
                 } else {
-                    result.data_type = JSON_error;
-                    return result;
+                    return_JSON_error();
                 }
             }
             case 't': { // true
@@ -199,8 +233,7 @@ JSON_value parse_json(char **s) {
                     result.data = NULL + 1;
                     return result;
                 } else {
-                    result.data_type = JSON_error;
-                    return result;
+                    return_JSON_error();
                 }
             }
             case 'n': { // null
@@ -209,8 +242,7 @@ JSON_value parse_json(char **s) {
                     result.data_type = JSON_data_type_null;
                     return result;
                 } else {
-                    result.data_type = JSON_error;
-                    return result;
+                    return_JSON_error();
                 }
             }
             case '0':
@@ -237,11 +269,3 @@ JSON_value parse_json(char **s) {
 
 // TODO: function to free a json value
 void free_json_value(JSON_value v) {}
-
-int main() {
-    char *x = "[[\"hi\", 123, 55,5.4], 123]";
-    JSON_value parse_example = parse_json(&x);
-    printf("%s\n", JSON_to_string(parse_example));
-    free_json_value(parse_example);
-    return 0;
-}

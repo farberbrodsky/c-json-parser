@@ -33,6 +33,6 @@ struct {
     ssize_t len;
 } typedef JSON_array;
 
-char * JSON_to_string(JSON_value);
+char *JSON_to_string(JSON_value);
 JSON_value parse_json(char **);
 void free_json_value(JSON_value v);
