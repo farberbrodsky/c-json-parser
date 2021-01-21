@@ -267,7 +267,6 @@ JSON_value parse_json(char **s) {
     return result;
 }
 
-// TODO: function to free a json value
 void free_json_value(JSON_value v) {
     switch (v.data_type) {
         case JSON_data_type_string: {
