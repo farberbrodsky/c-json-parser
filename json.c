@@ -128,6 +128,32 @@ JSON_array parse_array(char *s) {
 }
 
 char * parse_string(char *s) {
+    char *result = malloc(strlen(s) + 1);
+    char *current_char = result;
+    for (char *p = s; *p != '\0'; p++) {
+        if (*p == '\\') {
+            switch (*(++p)) {
+                case '\\':
+                    *current_char = '\\';
+                    break;
+                case '"':
+                    *current_char = '"';
+                    break;
+                case 'n':
+                    *current_char = '\n';
+                    break;
+            }
+        } else if (*p == '"') {
+            current_char++;
+            *current_char = '\0';
+            return result;
+        } else {
+            *current_char = *p;
+        }
+        current_char++;
+    }
+    *current_char = '\0';
+    return result;
 }
 
 double parse_number(char *s) {
