@@ -1,39 +1,7 @@
 #define _GNU_SOURCE
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
+#include "json.h"
 
-enum {
-    JSON_data_type_string,
-    JSON_data_type_number,
-    JSON_data_type_object,
-    JSON_data_type_array,
-    JSON_data_type_bool,
-    JSON_data_type_null
-} typedef JSON_data_type;
-
-struct {
-    JSON_data_type data_type;
-    void *data;
-} typedef JSON_value;
-
-struct {
-    char* key;
-    JSON_value value;
-} typedef JSON_key_value;
-
-struct {
-    JSON_key_value* values;
-    ssize_t len;
-} typedef JSON_object;
-
-struct {
-    JSON_value* values;
-    ssize_t len;
-} typedef JSON_array;
-
-char * to_string(JSON_value v) {
+char * JSON_to_string(JSON_value v) {
     char *result;
     switch (v.data_type) {
         case JSON_data_type_string: {
@@ -57,7 +25,7 @@ char * to_string(JSON_value v) {
             for (int i = 0; i < data.len; i++) {
                 JSON_key_value key_val = data.values[i];
                 len += strlen(key_val.key) + 3; // "key":
-                char *val_str = to_string(key_val.value);
+                char *val_str = JSON_to_string(key_val.value);
                 len += strlen(val_str);
                 if (i != (data.len - 1)) {
                     len += 1; // add comma
@@ -85,7 +53,7 @@ char * to_string(JSON_value v) {
             result[0] = '[';
             for (int i = 0; i < data.len; i++) {
                 JSON_value val = data.values[i];
-                char *val_str = to_string(val);
+                char *val_str = JSON_to_string(val);
                 len += strlen(val_str);
                 if (i != (data.len - 1)) {
                     len += 1; // add comma
@@ -125,6 +93,19 @@ JSON_object parse_object(char **s) {
 }
 
 JSON_array parse_array(char **s) {
+    JSON_array result;
+    result.len = 0;
+    result.values = malloc(sizeof(JSON_value));
+    while (**s != ']') {
+        while (**s == ' ' || **s == ',') {
+            ++*s;
+        }
+        JSON_value x = parse_json(s);
+        result.values[result.len] = x;
+        result.len++;
+        result.values = realloc(result.values, sizeof(JSON_value) * (result.len + 1));
+    }
+    return result;
 }
 
 char * parse_string(char **s) {
@@ -144,6 +125,7 @@ char * parse_string(char **s) {
                     break;
             }
         } else if (**s == '"') {
+            ++*s;
             current_char++;
             *current_char = '\0';
             return result;
@@ -179,6 +161,7 @@ JSON_value parse_json(char **s) {
                 ++*s;
                 result.data_type = JSON_data_type_array;
                 JSON_array arr = parse_array(s);
+                result.data = malloc(sizeof(JSON_array));
                 memcpy(result.data, &arr, sizeof(JSON_array));
                 return result;
             }
@@ -226,33 +209,12 @@ JSON_value parse_json(char **s) {
 }
 
 // TODO: function to free a json value
+void free_json_value(JSON_value v) {}
 
 int main() {
-    JSON_value my_first_str;
-    my_first_str.data = malloc(6);
-    strcpy(my_first_str.data, "world");
-    my_first_str.data_type = JSON_data_type_string;
-
-    JSON_key_value first_key_value;
-    first_key_value.key = malloc(6);
-    strcpy(first_key_value.key, "Hello");
-    first_key_value.value = my_first_str;
-    JSON_key_value *my_key_values = malloc(sizeof(JSON_key_value) * 2);
-
-    my_key_values[0] = first_key_value;
-    my_key_values[1] = first_key_value;
-
-    JSON_object my_obj;
-    my_obj.len = 2;
-    my_obj.values = my_key_values;
-
-    JSON_value my_value;
-    my_value.data_type = JSON_data_type_object;
-    my_value.data = &my_obj;
-
-    char *x = "123.4";
+    char *x = "[\"hi\", 123, 55,5.4]";
     JSON_value parse_example = parse_json(&x);
-
-    printf("%s\n", to_string(parse_example));
+    printf("%s\n", JSON_to_string(parse_example));
+    free_json_value(parse_example);
     return 0;
 }
