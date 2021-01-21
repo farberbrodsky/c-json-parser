@@ -104,11 +104,10 @@ char * to_string(JSON_value v) {
             break;
         }
         case JSON_data_type_bool: {
-            bool data = *((bool*)data);
-            if (data) {
+            if (v.data == NULL + 1) {
                 result = malloc(5);
                 strcpy(result, "true");
-            } else {
+            } else if (v.data == NULL) {
                 result = malloc(6);
                 strcpy(result, "false");
             }
@@ -119,6 +118,77 @@ char * to_string(JSON_value v) {
             strcpy(result, "null");
         }
     }
+    return result;
+}
+
+JSON_object parse_object(char *s) {
+}
+
+JSON_array parse_array(char *s) {
+}
+
+char * parse_string(char *s) {
+}
+
+double parse_number(char *s) {
+}
+
+JSON_value parse_json(char *s) {
+    JSON_value result;
+    for (char *p = s; *p != '\0'; p++) {
+        switch (*p) {
+            case '{': {
+                // object
+                result.data_type = JSON_data_type_object;
+                JSON_object obj = parse_object(p + 1);
+                memcpy(result.data, &obj, sizeof(JSON_object));
+                return result;
+            }
+            case '[': { // array
+                result.data_type = JSON_data_type_array;
+                JSON_array arr = parse_array(p + 1);
+                memcpy(result.data, &arr, sizeof(JSON_array));
+                return result;
+            }
+            case '"': { // string
+                result.data_type = JSON_data_type_string;
+                char *str = parse_string(p + 1);
+                result.data = str;
+                return result;
+            }
+            case 'f': { // false
+                result.data_type = JSON_data_type_bool;
+                result.data = NULL;
+                return result;
+            }
+            case 't': { // true
+                result.data_type = JSON_data_type_bool;
+                result.data = NULL + 1;
+                return result;
+            }
+            case 'n': { // null
+                result.data_type = JSON_data_type_null;
+                return result;
+            }
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9': // number
+                result.data_type = JSON_data_type_number;
+                double d = parse_number(p);
+                result.data = malloc(sizeof(double));
+                memcpy(result.data, &d, sizeof(double));
+                break;
+        }
+    }
+    // return a NULL if this isn't valid
+    result.data_type = JSON_data_type_null;
     return result;
 }
 
@@ -147,6 +217,8 @@ int main() {
     my_value.data_type = JSON_data_type_object;
     my_value.data = &my_obj;
 
-    printf("%s\n", to_string(my_value));
+    JSON_value parse_example = parse_json("true");
+
+    printf("%s\n", to_string(parse_example));
     return 0;
 }
