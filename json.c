@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #define _GNU_SOURCE
 
@@ -8,7 +9,7 @@ enum {
     JSON_data_type_number,
     JSON_data_type_object,
     JSON_data_type_array,
-    JSON_data_type_boolean,
+    JSON_data_type_bool,
     JSON_data_type_null
 } typedef JSON_data_type;
 
@@ -26,6 +27,11 @@ struct {
     JSON_key_value* values;
     ssize_t len;
 } typedef JSON_object;
+
+struct {
+    JSON_value* values;
+    ssize_t len;
+} typedef JSON_array;
 
 char * to_string(JSON_value v) {
     char *result;
@@ -72,13 +78,45 @@ char * to_string(JSON_value v) {
             break;
         }
         case JSON_data_type_array: {
+            JSON_array data = *((JSON_array*)v.data);
+            ssize_t len = 3; // []\0
+            result = malloc(len);
+            ssize_t str_index = 1;
+            result[0] = '[';
+            for (int i = 0; i < data.len; i++) {
+                JSON_value val = data.values[i];
+                char *val_str = to_string(val);
+                len += strlen(val_str);
+                if (i != (data.len - 1)) {
+                    len += 1; // add comma
+                }
+                result = realloc(result, len);
+                memcpy(result + str_index, val_str, strlen(val_str));
+                str_index += strlen(val_str);
+                if (i != (data.len - 1)) {
+                    result[str_index] = ',';
+                    str_index += 1;
+                }
+                free(val_str);
+            }
+            result[str_index] = ']';
+            result[str_index + 1] = '\0';
             break;
         }
-        case JSON_data_type_boolean: {
+        case JSON_data_type_bool: {
+            bool data = *((bool*)data);
+            if (data) {
+                result = malloc(5);
+                strcpy(result, "true");
+            } else {
+                result = malloc(6);
+                strcpy(result, "false");
+            }
             break;
         }
         case JSON_data_type_null: {
-            break;
+            result = malloc(5);
+            strcpy(result, "null");
         }
     }
     return result;
