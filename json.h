@@ -9,7 +9,8 @@ enum {
     JSON_data_type_object,
     JSON_data_type_array,
     JSON_data_type_bool,
-    JSON_data_type_null
+    JSON_data_type_null,
+    JSON_error // return type when there's an error
 } typedef JSON_data_type;
 
 struct {

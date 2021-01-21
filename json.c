@@ -85,6 +85,10 @@ char * JSON_to_string(JSON_value v) {
             result = malloc(5);
             strcpy(result, "null");
         }
+        case JSON_error: {
+            result = malloc(6);
+            strcpy(result, "error");
+        }
     }
     return result;
 }
@@ -92,23 +96,29 @@ char * JSON_to_string(JSON_value v) {
 JSON_object parse_object(char **s) {
 }
 
-JSON_array parse_array(char **s) {
-    JSON_array result;
-    result.len = 0;
-    result.values = malloc(sizeof(JSON_value));
+JSON_value parse_array(char **s) {
+    JSON_array *result = (JSON_array*)malloc(sizeof(JSON_array));
+    result->len = 0;
+    result->values = malloc(sizeof(JSON_value));
     while (**s != ']') {
         while (**s == ' ' || **s == ',') {
             ++*s;
         }
         JSON_value x = parse_json(s);
-        result.values[result.len] = x;
-        result.len++;
-        result.values = realloc(result.values, sizeof(JSON_value) * (result.len + 1));
+        if (x.data_type == JSON_error) {
+            return x;
+        }
+        result->values[result->len] = x;
+        result->len++;
+        result->values = realloc(result->values, sizeof(JSON_value) * (result->len + 1));
     }
     if (**s == ']') {
         ++*s;
     }
-    return result;
+    JSON_value final_result;
+    final_result.data_type = JSON_data_type_array;
+    final_result.data = result;
+    return final_result;
 }
 
 char * parse_string(char **s) {
@@ -162,11 +172,7 @@ JSON_value parse_json(char **s) {
             }
             case '[': { // array
                 ++*s;
-                result.data_type = JSON_data_type_array;
-                JSON_array arr = parse_array(s);
-                result.data = malloc(sizeof(JSON_array));
-                memcpy(result.data, &arr, sizeof(JSON_array));
-                return result;
+                return parse_array(s);
             }
             case '"': { // string
                 ++*s;
@@ -181,6 +187,9 @@ JSON_value parse_json(char **s) {
                     result.data_type = JSON_data_type_bool;
                     result.data = NULL;
                     return result;
+                } else {
+                    result.data_type = JSON_error;
+                    return result;
                 }
             }
             case 't': { // true
@@ -189,11 +198,20 @@ JSON_value parse_json(char **s) {
                     result.data_type = JSON_data_type_bool;
                     result.data = NULL + 1;
                     return result;
+                } else {
+                    result.data_type = JSON_error;
+                    return result;
                 }
             }
             case 'n': { // null
-                result.data_type = JSON_data_type_null;
-                return result;
+                if (strncmp(*s, "null", 4) == 0) {
+                    *s += 4;
+                    result.data_type = JSON_data_type_null;
+                    return result;
+                } else {
+                    result.data_type = JSON_error;
+                    return result;
+                }
             }
             case '0':
             case '1':
