@@ -1,8 +1,8 @@
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
-#define _GNU_SOURCE
 
 enum {
     JSON_data_type_string,
